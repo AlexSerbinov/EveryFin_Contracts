@@ -33,7 +33,7 @@ interface IERC20 {
     function approve(address spender, uint256 amount) external returns (bool);
 }
 
-contract UniswapTradeExample {
+contract UniswapBaseProxy {
     IUniswap uniswap;
 
     // Pass in address of UniswapV2Router02

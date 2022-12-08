@@ -5,7 +5,7 @@ const ERC20ABI = require("../externalAbi/ERC20.json");
 const UNISWAPV2ROUTER02_ADDRESS = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"; // Uniswap V2: Router 2
 const DAI_ADDRESS = "0x6b175474e89094c44da98b954eedeac495271d0f"; // DAI Stablecoin
 
-describe("UniswapTradeExample", function () {
+describe("UniswapBaseProxy", function () {
   it("Swap ETH for DAI", async function () {
     const provider = ethers.provider;
     const [owner, addr1] = await ethers.getSigners();
@@ -20,14 +20,14 @@ describe("UniswapTradeExample", function () {
     addr1Dai = await DAI.balanceOf(addr1.address);
     assert(addr1Dai.isZero());
 
-    // Deploy UniswapTradeExample
-    const uniswapTradeExample = await ethers
-      .getContractFactory("UniswapTradeExample")
+    // Deploy UniswapBaseProxy
+    const UniswapBaseProxy = await ethers
+      .getContractFactory("UniswapBaseProxy")
       .then((contract) => contract.deploy(UNISWAPV2ROUTER02_ADDRESS));
-    await uniswapTradeExample.deployed();
+    await UniswapBaseProxy.deployed();
 
     // Swap 1 ETH for DAI
-    await uniswapTradeExample.connect(addr1).swapExactETHForTokens(0, DAI_ADDRESS, { value: ethers.utils.parseEther("1") });
+    await UniswapBaseProxy.connect(addr1).swapExactETHForTokens(0, DAI_ADDRESS, { value: ethers.utils.parseEther("1") });
 
     // Assert addr1Balance contains one less ETH
     expectedBalance = addr1Balance.sub(ethers.utils.parseEther("0.000001"));
@@ -63,17 +63,17 @@ describe("UniswapTradeExample", function () {
     addr1Dai = await DAI.balanceOf(addr1.address);
     assert(addr1Dai.gt(ethers.BigNumber.from("0")));
 
-    // Deploy UniswapTradeExample
-    const uniswapTradeExample = await ethers
-      .getContractFactory("UniswapTradeExample")
+    // Deploy UniswapBaseProxy
+    const UniswapBaseProxy = await ethers
+      .getContractFactory("UniswapBaseProxy")
       .then((contract) => contract.deploy(UNISWAPV2ROUTER02_ADDRESS));
-    await uniswapTradeExample.deployed();
+    await UniswapBaseProxy.deployed();
 
     // Swap 1 ETH for DAI
     console.log(`1----=-----=----=----=----=----=----- DAI balance  -----=-----=-----=-----=-- 1`);
     console.log(addr1Dai);
     console.log(`2----=-----=----=----=----=----=----- DAI balance  -----=-----=-----=-----=-- 2`);
-    await uniswapTradeExample.connect(addr1).swapTokensForETH(DAI_ADDRESS, addr1Dai, 0);
+    await UniswapBaseProxy.connect(addr1).swapTokensForETH(DAI_ADDRESS, addr1Dai, 0);
 
     // Assert addr1Balance contains one less ETH
     // expectedBalance = addr1Balance.sub(ethers.utils.parseEther("1"));

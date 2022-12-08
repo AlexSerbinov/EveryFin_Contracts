@@ -8,7 +8,7 @@ const TRADERJOEV2ROUTER02_ADDRESS = "0x7b50046cec8252ca835b148b1edd997319120a12"
 const USDT_ADDRESS = "0xab231a5744c8e6c45481754928ccffffd4aa0732"; // USDT Fuji
 const WAVAX_ADDRESS = "0xd00ae08403b9bbb9124bb305c09058e32c39a48c"; // WAVAX_ADDRESS Fuji
 
-describe("TraderJoeTradeExample", function () {
+describe("TraderJoeBaseProxy", function () {
   it.only("Swap AVAX for USDT", async function () {
     const provider = ethers.provider;
     const [owner, addr1] = await ethers.getSigners();
@@ -30,18 +30,18 @@ describe("TraderJoeTradeExample", function () {
     console.log(await USDT.name());
     addr1Usdt = await USDT.balanceOf(addr1.address);
     assert(addr1Usdt.isZero());
-    // Deploy TraderJoeTradeExample
-    const traderJoeTradeExample = await ethers
-      .getContractFactory("TraderJoeTradeExample")
+    // Deploy TraderJoeBaseProxy
+    const TraderJoeBaseProxy = await ethers
+      .getContractFactory("TraderJoeBaseProxy")
       .then((contract) => contract.deploy(TRADERJOEV2ROUTER02_ADDRESS));
-    await traderJoeTradeExample.deployed();
+    await TraderJoeBaseProxy.deployed();
     console.log(`======================= traderJoe deployed ===================`);
 
     // Swap 1 AVAX for USDT
-    console.log(0, 0, {WAVAX_ADDRESS}, {USDT_ADDRESS}, { value: ethers.utils.parseEther("1") });
-    await traderJoeTradeExample
-      .connect(addr1)
-      .swapExactAVAXForTokens(0, [0], WAVAX_ADDRESS, USDT_ADDRESS, { value: ethers.utils.parseEther("1") });
+    console.log(0, 0, { WAVAX_ADDRESS }, { USDT_ADDRESS }, { value: ethers.utils.parseEther("1") });
+    await TraderJoeBaseProxy.connect(addr1).swapExactAVAXForTokens(0, [0], WAVAX_ADDRESS, USDT_ADDRESS, {
+      value: ethers.utils.parseEther("1"),
+    });
     // .swapExactAVAXForTokens(0, 0, WAVAX_ADDRESS, USDT_ADDRESS, { value: 10000000 });
     console.log(`======================= swapped ===================`);
 
@@ -79,17 +79,17 @@ describe("TraderJoeTradeExample", function () {
   //   addr1Usdt = await USDT.balanceOf(addr1.address);
   //   assert(addr1Usdt.gt(ethers.BigNumber.from("0")));
 
-  //   // Deploy TraderJoeTradeExample
-  //   const traderJoeTradeExample = await ethers
-  //     .getContractFactory("TraderJoeTradeExample")
+  //   // Deploy TraderJoeBaseProxy
+  //   const TraderJoeBaseProxy = await ethers
+  //     .getContractFactory("TraderJoeBaseProxy")
   //     .then((contract) => contract.deploy(TRADERJOEV2ROUTER02_ADDRESS));
-  //   await traderJoeTradeExample.deployed();
+  //   await TraderJoeBaseProxy.deployed();
 
   //   // Swap 1 AVAX for USDT
   //   console.log(`1----=-----=----=----=----=----=----- USDT balance  -----=-----=-----=-----=-- 1`);
   //   console.log(addr1Usdt);
   //   console.log(`2----=-----=----=----=----=----=----- USDT balance  -----=-----=-----=-----=-- 2`);
-  //   await traderJoeTradeExample.connect(addr1).swapTokensForAVAX(USDT_ADDRESS, addr1Usdt, 0);
+  //   await TraderJoeBaseProxy.connect(addr1).swapTokensForAVAX(USDT_ADDRESS, addr1Usdt, 0);
 
   //   // Assert addr1Balance contains one less AVAX
   //   // expectedBalance = addr1Balance.sub(ethers.utils.parseEther("1"));
