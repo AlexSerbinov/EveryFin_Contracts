@@ -5,6 +5,8 @@ import "hardhat/console.sol";
 
 contract EveryFinStaking {
 
-    constructor() {
-    }
+    // constructor() {
+
+    // }
+
 }
