@@ -1,6 +1,7 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.17;
 
 // import "hardhat/console.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 interface ITraderJoe {
     /// @notice Swaps exact AVAX for tokens while performing safety checks
@@ -17,37 +18,19 @@ interface ITraderJoe {
         address _to,
         uint256 _deadline
     ) external payable returns (uint256 amountOut);
-
-    // function WETH() external pure returns (address);
-
-    // function swapExactTokensForETH(
-    //     uint256 amountIn,
-    //     uint256 amountOutMin,
-    //     address[] calldata path,
-    //     address to,
-    //     uint256 deadline=
-    // ) external returns (uint256[] memory amounts);
-}
-
-interface IERC20 {
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external;
-
-    function approve(address spender, uint256 amount) external returns (bool);
 }
 
 contract TraderJoeBaseProxy {
+    using SafeERC20 for IERC20;
+    uint256 public fee = 100;
     ITraderJoe traderJoe;
+    IERC20 private IERC20Token;
 
-    // Pass in address of UniswapV2Router02
+    // Pass in address of TraderJoeV2Router02
     constructor(address _traderJoe) public {
         traderJoe = ITraderJoe(_traderJoe);
     }
 
-    // (0, 0, WAVAX_ADDRESS, USDT_ADDRESS, { value: ethers.utils.parseEther("1") });
     function swapExactAVAXForTokens(
         uint256 amountOutMin,
         uint256[] memory _pairBinSteps,
@@ -57,12 +40,57 @@ contract TraderJoeBaseProxy {
     ) external payable {
         IERC20[] memory path = new IERC20[](2);
         path[0] = wavax;
-        // console.log(path[0]);
         path[1] = token;
-        traderJoe.swapExactAVAXForTokens{value: msg.value}(amountOutMin, _pairBinSteps, path, msg.sender, block.timestamp);
+        uint256 sumMinusFee = msg.value - ((msg.value * fee) / 10000);
+        traderJoe.swapExactAVAXForTokens{value: sumMinusFee}(amountOutMin, _pairBinSteps, path, tx.origin, block.timestamp);
+        // change back to msg.sender!!
     }
 
-    // function swapTokensForETH(
+    function getTokenProfit(IERC20 token) public view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
+    }
+
+    function getProfit() public view returns (uint256) {
+        return address(this).balance;
+    }
+
+    // 1% = 100 untis. fee can not be bigger than 10%
+    function setFeeInPercentage(uint256 _newFee) public {
+        require(_newFee <= 1000, "The fee cannot be bigger than 10%");
+        fee = _newFee;
+    }
+
+    function getFee() public view returns (uint256) {
+        return fee;
+    }
+
+    function withdrowTokenFee(
+        IERC20 _tokenAddress,
+        address _to,
+        uint256 _value
+    ) public {
+        IERC20Token = _tokenAddress;
+        IERC20Token.safeTransfer(_to, _value);
+    }
+
+    function withdrowAvaxFee(address payable _to) public {
+        // Call returns a boolean value indicating success or failure.
+        // This is the current recommended method to use.
+        (bool sent, bytes memory data) = _to.call{value: address(this).balance}("");
+        require(sent, "Failed to send Avax");
+    }
+
+    // Function to receive Avax. msg.data must be empty
+    receive() external payable {}
+
+    // Fallback function is called when msg.data is not empty
+    fallback() external payable {}
+
+    function getContractAvaxBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+
+    // function swapTokensForAVAX(
     //     address token,
     //     uint256 amountIn,
     //     uint256 amountOutMin
@@ -72,9 +100,10 @@ contract TraderJoeBaseProxy {
     //     path[0] = token;
     //     path[1] = uniswap.WETH();
     //     IERC20(token).approve(address(uniswap), amountIn);
-    //     uniswap.swapExactTokensForETH(amountIn, amountOutMin, path, msg.sender, block.timestamp);
+    //     uniswap.swapExactTokensForAVAX(amountIn, amountOutMin, path, msg.sender, block.timestamp);
     // }
 }
+
 // amountIn - The amount of input tokens to send.
 // amountOutMin - The minimum amount of output tokens that must be received for the transaction not to revert.
 // по идее курс тенятся откуда-то (сказали что надо тянуть с оракла) и я должен считать amountOutMin в зависимости

@@ -1,5 +1,7 @@
-const { assert } = require("chai");
+const { expect, assert } = require("chai");
 const { ethers } = require("hardhat");
+const hre = require("hardhat");
+const Ganache = require("./helpers/ganache");
 const ERC20ABI = require("../externalAbi/ERC20.json");
 
 // const TRADERJOEV2ROUTER02_ADDRESS = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"; // TraderJoe V2: Router 2
@@ -7,121 +9,90 @@ const TRADERJOEV2ROUTER02_ADDRESS = "0x7b50046cec8252ca835b148b1edd997319120a12"
 // const USDT_ADDRESS = "0x6b175474e89094c44da98b954eedeac495271d0f"; // USDT Stablecoin
 const USDT_ADDRESS = "0xab231a5744c8e6c45481754928ccffffd4aa0732"; // USDT Fuji
 const WAVAX_ADDRESS = "0xd00ae08403b9bbb9124bb305c09058e32c39a48c"; // WAVAX_ADDRESS Fuji
+const MAX_FEE_PERCENTAGE = 1000;
 
-describe("TraderJoeBaseProxy", function () {
-  it.only("Swap AVAX for USDT", async function () {
-    const provider = ethers.provider;
-    const [owner, addr1] = await ethers.getSigners();
-    const USDT = new ethers.Contract(USDT_ADDRESS, ERC20ABI, provider);
-    // console.log(`1----=-----=----=----=----=----=----- USDT -----=-----=-----=-----=-- 1`);
-    // console.log(USDT);
-    // console.log(`2----=-----=----=----=----=----=----- USDT -----=-----=-----=-----=-- 2`);
+describe("Should succesfully swap AVAX to ERC20 token(USDT) using", async function () {
+    const ganache = new Ganache();
+    const bn = (input) => BigNumber.from(input);
+    const assertBNequal = (bnOne, bnTwo) => assert.strictEqual(bnOne.toString(), bnTwo.toString());
 
-    // Assert addr1 has 1000 AVAX to start
-    addr1Balance = await provider.getBalance(addr1.address);
-    expectedBalance = ethers.BigNumber.from("10000000000000000000000");
-    // assert(addr1Balance.eq(expectedBalance));
-    // console.log(`1----=-----=----=----=----=----=----- addr1Balance -----=-----=-----=-----=-- 1`);
-    // console.log(addr1Balance.eq(expectedBalance));
-    // console.log(addr1Balance);
-    // console.log(`2----=-----=----=----=----=----=-----  -----=-----=-----=-----=-- 2`);
+    const adminRole = ethers.utils.id("ADMIN_ROLE");
+    const ownerRole = ethers.utils.id("OWNER_ROLE");
 
-    // Assert addr1 USDT balance is 0
-    console.log(await USDT.name());
-    addr1Usdt = await USDT.balanceOf(addr1.address);
-    assert(addr1Usdt.isZero());
-    // Deploy TraderJoeBaseProxy
-    const TraderJoeBaseProxy = await ethers
-      .getContractFactory("TraderJoeBaseProxy")
-      .then((contract) => contract.deploy(TRADERJOEV2ROUTER02_ADDRESS));
-    await TraderJoeBaseProxy.deployed();
-    console.log(`======================= traderJoe deployed ===================`);
+    before("setup", async function () {
+        [owner, main] = await ethers.getSigners();
+        // Deploy USDT
+        USDT = new ethers.Contract(USDT_ADDRESS, ERC20ABI, provider);
+        // Deploy TraderJoeBaseProxy
+        TraderJoeBaseProxy = await ethers.getContractFactory("TraderJoeBaseProxy").then((contract) => contract.deploy(TRADERJOEV2ROUTER02_ADDRESS));
+        await TraderJoeBaseProxy.deployed();
 
-    // Swap 1 AVAX for USDT
-    console.log(0, 0, { WAVAX_ADDRESS }, { USDT_ADDRESS }, { value: ethers.utils.parseEther("1") });
-    await TraderJoeBaseProxy.connect(addr1).swapExactAVAXForTokens(0, [0], WAVAX_ADDRESS, USDT_ADDRESS, {
-      value: ethers.utils.parseEther("1"),
+        await ganache.snapshot();
     });
-    // .swapExactAVAXForTokens(0, 0, WAVAX_ADDRESS, USDT_ADDRESS, { value: 10000000 });
-    console.log(`======================= swapped ===================`);
 
-    // Assert addr1Balance contains one less AVAX
-    expectedBalance = addr1Balance.sub(ethers.utils.parseEther("0.000001"));
-    addr1Balance = await provider.getBalance(addr1.address);
-    assert(addr1Balance.lt(expectedBalance));
+    afterEach("revert", function () {
+        return ganache.revert();
+    });
 
-    // Assert USDT balance increased
-    addr1Usdt = await USDT.balanceOf(addr1.address);
-    console.log(addr1Usdt);
+    const provider = ethers.provider;
 
-    assert(addr1Usdt.gt(ethers.BigNumber.from("0")));
-  });
+    it.only("Swap AVAX to USDT", async function () {
+        // Assert main has 1000 AVAX to start
+        mainAddrBalance = await provider.getBalance(main.address);
+        // Assert main USDT balance is 0
+        assert(mainAddrBalance.eq(ethers.BigNumber.from(ethers.utils.parseEther("10000"))), "start AVAX balance should equal 1000 AVAX, test requirement not ready to start ");
+        mainAddrUsdtBalance = await USDT.balanceOf(main.address);
 
-  // it("Swap USDT for AVAX", async function () {
-  //   const provider = ethers.provider;
-  //   const [owner, addr1] = await ethers.getSigners();
-  //   const USDT = new ethers.Contract(USDT_ADDRESS, ERC20ABI, provider);
+        assert(mainAddrUsdtBalance.isZero(), "token balance is non zero, test requirement not ready to start");
 
-  //   // Assert addr1 has 1000 AVAX to start
-  //   addr1Balance = await provider.getBalance(addr1.address);
-  //   // console.log(`1----=-----=----=----=----=----=----- addr1Balance -----=-----=-----=-----=-- 1`);
-  //   // console.log(addr1Balance);
-  //   // console.log(`2----=-----=----=----=----=----=----- addr1Balance -----=-----=-----=-----=-- 2`);
+        // Swap 1 AVAX for USDT
+        await TraderJoeBaseProxy.connect(main).swapExactAVAXForTokens(0, [0], WAVAX_ADDRESS, USDT_ADDRESS, {
+            value: ethers.utils.parseEther("1"),
+        });
 
-  //   // expectedBalance = ethers.BigNumber.from("9998990000000000000000"); // 9998.99 AVAX
-  //   expectedBalance = ethers.BigNumber.from("999899000000000"); // 9998.99 AVAX
-  //   assert(addr1Balance.gt(expectedBalance));
-  //   // console.log(`1----=-----=----=----=----=----=----- expectedBalance -----=-----=-----=-----=-- 1`);
-  //   // console.log(expectedBalance);
-  //   // console.log(`2----=-----=----=----=----=----=----- expectedBalance -----=-----=-----=-----=-- 2`);
+        // Assert mainAddrBalance contains one less AVAX
+        expectedBalance = mainAddrBalance.sub(ethers.utils.parseEther("0.000001"));
+        mainAddrBalance = await provider.getBalance(main.address);
 
-  //   // Assert addr1 USDT balance is 0
-  //   addr1Usdt = await USDT.balanceOf(addr1.address);
-  //   assert(addr1Usdt.gt(ethers.BigNumber.from("0")));
+        assert(mainAddrBalance.lt(expectedBalance), "AVAX not minused from admin AVAX balance");
 
-  //   // Deploy TraderJoeBaseProxy
-  //   const TraderJoeBaseProxy = await ethers
-  //     .getContractFactory("TraderJoeBaseProxy")
-  //     .then((contract) => contract.deploy(TRADERJOEV2ROUTER02_ADDRESS));
-  //   await TraderJoeBaseProxy.deployed();
+        // Assert USDT balance increased
+        mainAddrUsdtBalance = await USDT.balanceOf(main.address);
+        assert(mainAddrUsdtBalance.gt(ethers.BigNumber.from("0")), "USDT balance on main address not increased, swap unsucsefull");
+    });
 
-  //   // Swap 1 AVAX for USDT
-  //   console.log(`1----=-----=----=----=----=----=----- USDT balance  -----=-----=-----=-----=-- 1`);
-  //   console.log(addr1Usdt);
-  //   console.log(`2----=-----=----=----=----=----=----- USDT balance  -----=-----=-----=-----=-- 2`);
-  //   await TraderJoeBaseProxy.connect(addr1).swapTokensForAVAX(USDT_ADDRESS, addr1Usdt, 0);
+    it.only("Should return fee value, base fee shoul equal 1% (100 units)", async function () {
+        const fee = await TraderJoeBaseProxy.getFee();
+        assert.equal(fee, `100`);
+    });
 
-  //   // Assert addr1Balance contains one less AVAX
-  //   // expectedBalance = addr1Balance.sub(ethers.utils.parseEther("1"));
+    it.only("Should be possible to change fee", async function () {
+        await TraderJoeBaseProxy.setFeeInPercentage(50);
+        const fee = await TraderJoeBaseProxy.getFee();
+        assert.equal(fee, `50`);
+    });
 
-  //   addr1Balance = await ethers.BigNumber.from(provider.getBalance(addr1.address));
-  //   console.log(`1----=-----=----=----=----=----=----- avax balance  -----=-----=-----=-----=-- 1`);
-  //   console.log(addr1Balance);
-  //   console.log(`2----=-----=----=----=----=----=----- avax balance  -----=-----=-----=-----=-- 2`);
-  //   // assert(addr1Balance.lt(expectedBalance));
+    it.only(`Should return an error when trying to set up fee more than ${MAX_FEE_PERCENTAGE / 100}$`, async function () {
+        await expect(TraderJoeBaseProxy.connect(main).setFeeInPercentage(2000)).to.be.revertedWith("The fee cannot be bigger than 10%");
+        const fee = await TraderJoeBaseProxy.getFee();
+        assert.equal(fee, `100`);
+    });
 
-  //   // Assert USDT balance increased
-  //   addr1Usdt = await ethers.BigNumber.from(USDT.balanceOf(addr1.address));
-  //   console.log(`1----=-----=----=----=----=----=----- USDT balance  -----=-----=-----=-----=-- 1`);
-  //   console.log(addr1Usdt);
-  //   console.log(`2----=-----=----=----=----=----=----- USDT balance  -----=-----=-----=-----=-- 2`);
+    it.only(`Should be possible to withdrow AVAX from proxy contract`, async function () {
+        await TraderJoeBaseProxy.connect(main).swapExactAVAXForTokens(0, [0], WAVAX_ADDRESS, USDT_ADDRESS, {
+            value: ethers.utils.parseEther("1"),
+        });
 
-  //   // console.log(addr1Usdt);
+        assert(mainAddrUsdtBalance.gt(ethers.BigNumber.from("0")), "USDT balance on main address not increased, swap unsucsefull");
+        const randomEmptyAddress = "0x0FEf957E583b0aCB499bC5946bCf997942b823CA";
 
-  //   // assert(addr1Usdt.gt(ethers.BigNumber.from("0")));
-  // });
+        contractAddrAvaxBalanceBeforeSwap = await provider.getBalance(TraderJoeBaseProxy.address);
+        ownerAddrAvaxBalanceBeforeSwap = await provider.getBalance(randomEmptyAddress);
+        await TraderJoeBaseProxy.connect(main).withdrowAvaxFee(randomEmptyAddress);
+        ownerAddrAvaxBalanceAfterSwap = await provider.getBalance(randomEmptyAddress);
+        contractAddrAvaxBalanceAfterSwap = await provider.getBalance(TraderJoeBaseProxy.address);
+
+        assert.equal(ownerAddrAvaxBalanceAfterSwap.toString(), contractAddrAvaxBalanceBeforeSwap.toString(), "withdrow unsuccsefull");
+        assert.equal(ownerAddrAvaxBalanceBeforeSwap.toString(), contractAddrAvaxBalanceAfterSwap.toString(), "withdrow unsuccsefull");
+    });
 });
-
-// function swapTokensForAVAX(
-//     address token,
-//     uint256 amountIn,
-//     uint256 amountOutMin
-// ) external returns (bool) {
-//     IERC20(token).transferFrom(msg.sender, address(this), amountIn);
-//     address[] memory path = new address[](2);
-//     path[0] = token;
-//     path[1] = traderJoe.WAVAX();
-//     IERC20(token).approve(address(traderJoe), amountIn);
-//     traderJoe.swapExactTokensForAVAX(amountIn, amountOutMin, path, msg.sender, block.timestamp);
-// }
-// }
