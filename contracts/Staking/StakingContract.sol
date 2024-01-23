@@ -61,7 +61,7 @@ contract StakingContract is AccessControlEnumerable, Pausable {
     // Function to submit the staking. It calculates the fee, performs the staking and transfers the staked tokens to the user.
     /// @notice Submits an amount of AVAX tokens for staking in the benqiStaking contract.
     /// @notice A fee is deducted from the submitted amount, which is set in the 'fee' state variable.
-    /// @notice The function will revert if the submit function of the benqiStaking contract doesn't return a positive value.
+    /// @notice The function will revert if the submit function of the benqiStaking contract does not return a positive value.
     /// @return Returns the amount of staked sAVAX tokens.
     function submit() public payable returns (uint) {
         require(!paused(), "Token swap is not allowed while the contract is on pause");
@@ -70,7 +70,7 @@ contract StakingContract is AccessControlEnumerable, Pausable {
         // Executing submit function from BenqiStaking contract
         uint shareAmount = benqiStaking.submit{ value: sumToSubmit }();
         // Making sure that submit function returned a valid amount of tokens
-        require(shareAmount > 0, "The submit operation didn't return tokens");
+        require(shareAmount > 0, "The submit operation did not return tokens");
         // Transferring staked tokens to the user
         benqiStaking.transfer(_msgSender(), shareAmount);
         // Returning the amount of staked tokens for further use in the frontend
